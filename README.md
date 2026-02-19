@@ -89,3 +89,18 @@ Run the full workflow:
 - ATAC_counts.txt, ATAC_ann.txt, ATAC_conds.txt
 - RNA_counts.txt, RNA_ann.txt, RNA_conds.txt
 - Comparison results: GM12878_vs_IMR90_ATACseq.txt, GM12878_vs_IMR90_RNAseq.txt, etc.
+
+### Re-running with recalMoDIFI
+
+After the full run, edit resources/SamplePair.tsv to define new Target–Reference comparisons.
+
+Example:
+| Target  | Reference         | Check |
+|---------|-------------------|-------|
+| GM12878 | IMR90             | PASS  |
+
+Then run:
+
+<pre> nextflow run modifi_example.nf -c modifi_example.config -entry recalMoDIFI </pre>
+
+
