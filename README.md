@@ -28,7 +28,7 @@ cd DACT
 
 ### Directory Layout
 <pre>
-DACT/
+MoDIFI/
 ├─ modifi_example.nf            # Main Nextflow pipeline
 ├─ modifi_example.config        # Configuration file
 ├─ images/
