@@ -23,7 +23,7 @@ It supports modular workflows, containerized execution (Docker/Singularity), and
 Clone the repository:
 <pre>
 git clone https://github.com/your-org/MoDIFI.git
-cd DACT
+cd MoDIFI
 </pre>
 
 ### Directory Layout
@@ -38,7 +38,9 @@ MoDIFI/
 │   └─ *.R            # R scripts
 ├─ resources/
 │   ├─ SampleInfo.tsv   # Auto-generated
-│   ├─ SamplePair.tsv   # Auto-generated (editable for recalDACT)
+│   ├─ SamplePair.tsv   # Auto-generated (editable for recalMoDIFI)
+│   ├─ hg38_annotation.txt   # Gene annotation file required for running RNA-seq DESeq2 analysis.
+│   ├─ Gnocchi.tsv      # prior information
 │   └─ Promoter/Promoter.tsv     # External promoter annotations
 │   └─ imr90/
 │       ├─ atac_seq/
