@@ -1,6 +1,6 @@
 # MoDIFI: Multi-omics Differential Inference for Functional Interpretation
 
-MoDIFI is a Nextflow DSL2 pipeline that integrates ATAC-seq, RNA-seq, Hi-C, and promoter annotations to calculate Differential ATAC–Chromatin–Transcriptome (DACT) scores.
+MoDIFI is a Nextflow DSL2 pipeline that integrates ATAC-seq, RNA-seq, Hi-C, and promoter annotations to calculate Multi-omics Differential Inference for Functional Interpretation (MoDIFI) scores.
 It supports modular workflows, containerized execution (Docker/Singularity), and flexible re-analysis with customizable sample pairings.
 
 ### Features
@@ -45,12 +45,10 @@ MoDIFI/
 │   └─ imr90/
 │       ├─ atac_seq/
 │       │   ├─ *.bed.gz
-│       │   ├─ bam/rep1/*.bam
-│       │   └─ bam/rep2/*.bam
+│       │   └─ bam/*.bam
 │       ├─ hic/*.bedpe.gz      # Hi-C data
 │       └─ rna_seq/
-│           ├─ rep1/*.tsv
-│           └─ rep2/*.tsv
+│           └─ *.tsv
 └─ output/
 </pre>
 
