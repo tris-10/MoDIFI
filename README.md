@@ -9,12 +9,12 @@ It supports modular workflows, containerized execution (Docker/Singularity), and
 - Modular workflow in Nextflow DSL2
 - Portable with Docker or Singularity containers
 - Automatic generation of SampleInfo.tsv and SamplePair.tsv
-- Re-analysis workflow recalDACT to test new combinations without rerunning the full pipeline
+- Re-analysis workflow recalMoDIFI to test new combinations without rerunning the full pipeline
 
 
 ### Requirements
 
-- Nextflow ≥ 23.10
+- Nextflow ≥ 22.10
 - Java ≥ 11
 - Docker or Singularity/Apptainer (recommended for HPC)
 
@@ -29,10 +29,9 @@ cd MoDIFI
 ### Directory Layout
 <pre>
 MoDIFI/
-├─ modifi_example.nf            # Main Nextflow pipeline
+├─ modifi.nf            # Main Nextflow pipeline
 ├─ modifi_example.config        # Configuration file
-├─ images/
-│   └─ modifi.sif       # Singularity container
+├─ modifi.sif         # Singularity container
 ├─ scripts/           # Pipeline scripts
 │   ├─ *.py           # Python scripts
 │   └─ *.R            # R scripts
@@ -44,11 +43,10 @@ MoDIFI/
 │   └─ Promoter/Promoter.tsv     # External promoter annotations
 │   └─ imr90/
 │       ├─ atac_seq/
-│       │   ├─ *.bed.gz
+│       │   ├─ *.bed.gz or *.narrowPeak.gz
 │       │   └─ bam/*.bam
 │       ├─ hic/*.bedpe.gz      # Hi-C data
-│       └─ rna_seq/
-│           └─ *.tsv
+│       └─ rna_seq/*.genes.results or *.tsv files
 └─ output/
 </pre>
 
@@ -56,20 +54,37 @@ MoDIFI/
 Update the input paths and parameters in <b> dact.config </b>.
 #### ATAC-seq:
   - Peak files:
-    <pre> ATACpeakFile='/atac_seq/*.bed.gz' </pre>
+    <pre> ATACBEDFile= absolute path </pre>
+  - BAM files:
+    <pre> ATACBAMFiles= absolute path </pre>   
   - Label for DESeq2 outputs:
     <pre> ATACSeq='ATACseq' </pre>
-  - Quality score filter (remove peaks with Q < 5):
-    <pre> atac_minQ=5 </pre>        
+    - Label for DESeq2 outputs:
+    <pre> ATACSeq='ATACseq' </pre> 
+  - Filter out low quality variants:
+    <pre> atac_minQ=5 </pre> 
+  - The column used for merging:
+    <pre> ATAC_Key_col='Region' </pre>      
 #### RNA-seq:
   - Gene expression files:
-    <pre> RNAFilePattern='/*tsv' </pre>
+    <pre> RNACountFile= absolute path  </pre>
   - Label for DESeq2 outputs:
-    <pre> RNASeq='RNAseq'   </pre>
+    <pre> RRNASeq='RNAseq'   </pre>
+  - The column of gene IDs for DEseq anlysis:
+    <pre> RNA_Key_col='GeneID'   </pre>
+  - The column of RNA counts for DEseq anlysis:
+    <pre> RNA_quantification='expected_count'   </pre>  
+#### Hi-C:
+  - HiC files:
+    <pre> HiCLoopsFile= absolute path  </pre>
+
+#### Others:
   - Gene annotation:
     <pre> RNA_ANN_File="${resources_dir}/hg38_annotation.txt" </pre>
-  - Quantification type:
-    <pre> RNA_quantification='expected_count' </pre>
+  - Prior information:
+    <pre> prior_file="${resources_dir}/Gnocchi.tsv" </pre>
+  - Prior information:
+  <pre> SamplePair = "${resources_dir}/SamplePair.tsv" </pre>
 
 ### Workflow Overview
 1. ATAC-seq peaks linked with promoters
@@ -82,13 +97,14 @@ Update the input paths and parameters in <b> dact.config </b>.
 
 Run the full workflow:
 
-<pre> bash nextflow run modifi_example.nf -c modifi_example.config </pre>
+<pre> bash nextflow run modifi.nf -c modifi_example.config </pre>
 
 ### Outputs include:
 
 - ATAC_counts.txt, ATAC_ann.txt, ATAC_conds.txt
 - RNA_counts.txt, RNA_ann.txt, RNA_conds.txt
-- Comparison results: GM12878_vs_IMR90_ATACseq.txt, GM12878_vs_IMR90_RNAseq.txt, etc.
+- Comparison results: [Target]_vs_[Reference]_ATACseq.txt, [Target]_vs_[Reference]_RNAseq.txt, etc.
+- MoDIFI results: MoDIFI_all_[Target]_vs_[Reference].tsv, MoDIFI_loop_[Target]_vs_[Reference].tsv 
 
 ### Re-running with recalMoDIFI
 
@@ -101,6 +117,4 @@ Example:
 
 Then run:
 
-<pre> nextflow run modifi_example.nf -c modifi_example.config -entry recalMoDIFI </pre>
-
-
+<pre> nextflow run modifi.nf -c modifi_example.config -entry recalMoDIFI </pre>
