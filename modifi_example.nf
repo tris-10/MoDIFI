@@ -167,25 +167,6 @@ process runDEseqRSEM{
     """    
 }
 
-process getDEseqInputForRNAseq{
-    container 'modifi.sif'
-    publishDir "${params.temp_dir}", mode: 'copy', pattern:"RNA_*.txt", saveAs: { filename -> filename }
-
-    output:
-    path "RNA_counts.txt", emit: RNA_counts, optional:true
-    path "RNA_conds.txt", emit: RNA_conds, optional:true
-    path "RNA_ann.txt", emit: RNA_ann, optional:true
-
-    script:
-    """
-    python ${params.script_dir}/GenerateDESeq2InputsFromRNAseq.py \\
-	-i "${params.resources_dir}/" \\
-	-l "${params.RepNUM_rna.keySet()}" \\
-        -r "${params.RepNUM_rna.values()}" \\
-        -p "${params.RNAFilePattern}" \\
-        --RNA_COL "${params.RNA_quantification}" 
-    """
-}
 
 process getDEseqInputForRNAseqCONDS{
     container 'modifi.sif'

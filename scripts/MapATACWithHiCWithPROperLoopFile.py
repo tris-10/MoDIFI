@@ -57,8 +57,6 @@ LABEL_X='X'
 LABEL_Y='Y'
 GENEID_X_COL='X_GeneID'
 GENEID_Y_COL='Y_GeneID'
-DACTpre_COL='DACTpre'
-DACT_COL='DACT'
 INDEX_COL='INDEX'
 STRAND_COL='Strand'
 
@@ -103,7 +101,9 @@ def importData(RNA_DEseq, dSampleInfo, Target, REF_SET, ResourcesDir, OutputDir,
             if label==LABEL_ATAC:
                 Filename ='PRO_ATAC_'+ Target+'_'+ref+'.tsv'
                 print (Filename)
-                filepath = os.path.join(OutputDir, Filename)
+                filepathA = os.path.join(OutputDir, Filename)
+                filepathB = Filename
+                filepath = filepathA if os.path.exists(filepathA) else filepathB                
                 print(f"Reading file: {filepath}")
                 if not os.path.exists(filepath):
                     raise FileNotFoundError(f"File not found: {filepath}")
@@ -113,9 +113,12 @@ def importData(RNA_DEseq, dSampleInfo, Target, REF_SET, ResourcesDir, OutputDir,
                     with open(filepath) as f:
                         print(f"First line: {f.readline()}")
                 
-                data = pd.read_csv(filepath, sep='\t')
-                #data = pd.read_csv(OutputDir+Filename, sep='\t')
-                ATAC[Target+'_'+ref]=data.copy()
+                if os.path.exists(filepath):
+                    data = pd.read_csv(filepath, sep='\t')
+                    #data = pd.read_csv(OutputDir+Filename, sep='\t')
+                    ATAC[Target+'_'+ref]=data.copy()
+                else:
+                    ATAC[Target+'_'+ref]=[]
             elif label==LABEL_RNA:
                 Filename = Target+'_vs_'+ref+'_'+LABEL_RNA+'.txt'
                 if RNA_DEseq==None:
@@ -271,13 +274,13 @@ def MultipleGeneID(HIC_atac_ALL):
     XY_TABLE = pd.concat(XY_TABLE, axis = 0)
     return XY_TABLE
         
-def LinkToHiC(ATAC, HiC, Target, OutputDir):
+def LinkToHiC(ATAC, HiC, Target, OutputDir, N):
     HIC_ATAC_OUT={}
     HIC_noATAC_OUT = {}
     itern = 0
     for name in list(ATAC.keys()):
-        filename = 'atacWithHiCasP_'+name.replace('/','_')+'.tsv'
-        filenameNO = 'atacWithHiCnotP_'+name.replace('/','_')+'.tsv'
+        filename = 'atacWithHiCasP_'+name.replace('/','_')+N+'.tsv'
+        filenameNO = 'atacWithHiCnotP_'+name.replace('/','_')+N+'.tsv'
         if os.path.exists(OutputDir+filename):
             data = pd.read_csv(OutputDir+filename, sep='\t')
             HIC_ATAC_OUT[name] = data.copy()
@@ -313,21 +316,22 @@ def LinkToHiC(ATAC, HiC, Target, OutputDir):
                 atac = atac.set_index(atac[COORDS_COL])
                 i=0
                 for data in [LOOP_ATAC, LOOP_nATAC]:
-                    DATA = data.copy()
-                    for xy in [LABEL_X, LABEL_Y]:
-                        Index_Col=xy+'_ATAC_'+COORDS_COL
-                        data = data.set_index(data[Index_Col])
-                        data_v = data[data[Index_Col].notna()]
-                        data_na = data[data[Index_Col].isna()]
-                        for col in [ Log2FC_COL, LFCSE_COL, Z_Score, PValue_COL, Padj_COL, FC_COL, FCnorm_COL]:
-                            data_v[xy+'_ATAC_'+col] = atac[col]
-                        data =pd.concat([data_v, data_na], axis = 0)
-                    data = data.sort_values(by=[HiC_A_COL, HiC_A_START_COL, HiC_A_END_COL])
-                    data = data.set_index(DATA.index)
-                    if i==0:
-                        HIC_ATAC_OUT[name] = data.copy()
-                    else:
-                        HIC_noATAC_OUT[name] = data.copy()
+                    if data.shape[0]>0:
+                        DATA = data.copy()
+                        for xy in [LABEL_X, LABEL_Y]:
+                            Index_Col=xy+'_ATAC_'+COORDS_COL
+                            data = data.set_index(data[Index_Col])
+                            data_v = data[data[Index_Col].notna()]
+                            data_na = data[data[Index_Col].isna()]
+                            for col in [ Log2FC_COL, LFCSE_COL, Z_Score, PValue_COL, Padj_COL, FC_COL, FCnorm_COL]:
+                                data_v[xy+'_ATAC_'+col] = atac[col]
+                            data =pd.concat([data_v, data_na], axis = 0)
+                        data = data.sort_values(by=[HiC_A_COL, HiC_A_START_COL, HiC_A_END_COL])
+                        data = data.set_index(DATA.index)
+                        if i==0:
+                            HIC_ATAC_OUT[name] = data.copy()
+                        else:
+                            HIC_noATAC_OUT[name] = data.copy()
                     i+=1
             itern+=1
     return HIC_ATAC_OUT, HIC_noATAC_OUT  
@@ -370,16 +374,17 @@ def CalculateBacon(HIC_ATAC_RNA, Target, REF_SET, Reference, LABEL_RNA, LABEL_AT
         Index_All = []
         for  ref in cleaned_values:
             hic_atax_name = Target+'_'+ref 
-            data = HIC_ATAC_RNA[hic_atax_name].copy()
-            data = data.set_index(data[HiC_A_COL]+data[HiC_A_START_COL].astype(int).astype(str)+'-'+
-                                  data[HiC_A_END_COL].astype(int).astype(str)+'-'+
-                                  data[HiC_B_END_COL].astype(int).astype(str)+'-'+
-                                  data['X_ATAC_Coords'].astype(str)+'-'+
-                                   data['Y_ATAC_Coords'].astype(str) +'-'+
-                                  data['X_GeneID'].astype(str)+'-'+
-                                   data['Y_GeneID'].astype(str))
-            Index_All.append((data.index))
-            COMBINE[hic_atax_name] = data.copy()
+            if hic_atax_name in list(HIC_ATAC_RNA.keys()):
+                data = HIC_ATAC_RNA[hic_atax_name].copy()
+                data = data.set_index(data[HiC_A_COL]+data[HiC_A_START_COL].astype(int).astype(str)+'-'+
+                                      data[HiC_A_END_COL].astype(int).astype(str)+'-'+
+                                      data[HiC_B_END_COL].astype(int).astype(str)+'-'+
+                                      data['X_ATAC_Coords'].astype(str)+'-'+
+                                       data['Y_ATAC_Coords'].astype(str) +'-'+
+                                      data['X_GeneID'].astype(str)+'-'+
+                                       data['Y_GeneID'].astype(str))
+                Index_All.append((data.index))
+                COMBINE[hic_atax_name] = data.copy()
         for i in range(len(Index_All)):
             if i==0: 
                 OL = set(Index_All[i])
@@ -504,14 +509,32 @@ def saveIntermediateFile(HIC_ATAC_OUT, FileINI):
     for name in list(HIC_ATAC_OUT.keys()):
         name_end = name.replace(':','_vs_').replace('/','_')
         HIC_ATAC_OUT[name].to_csv(FileINI+'_'+name_end+'.tsv', sep='\t', index=False)
-        
-def RUN(SampleInfo, SamplePair, RNA_DEseq, ResourcesDir, OutputDir, LABEL_RNA, LABEL_ATAC, PRO_Region, PRO_minOL, CTITLE):
-    ATAC = MapATACWithPRO.RUN(SampleInfo, SamplePair, ResourcesDir, OutputDir, PRO_Region, PRO_minOL, LABEL_RNA, LABEL_ATAC, True)
-    TMP={}
-    for cell_pair in list(ATAC.keys()):
-        TMP[cell_pair.replace('/','_')] = ATAC[cell_pair]
-    ATAC = TMP.copy()
+     
+
+def StrinToList(label):
+    STRING = label.replace('"', '').replace("'", '').replace("[", '').replace("]", '')
+    CELL=[]
+    for cell in  STRING.split(','):
+        CELL.append(cell.strip())
+    return CELL
+
+def HiCLoopBedFile(SampleInfo, hicloop):
+    dSampleInfo = pd.read_csv(SampleInfo, sep='\t')
+    notHIC = dSampleInfo[dSampleInfo[LABEL_COL]!=LABEL_HiC]
+    isHIC = dSampleInfo[dSampleInfo[LABEL_COL]==LABEL_HiC]
+    Info = hicloop.split('.tsv')[0]
+    Info = Info.split('_')
+    cell = Info[0]
+    N = Info[1].split('MergedLoop')[1]   
+    isHIC_target = isHIC[isHIC[FILENAME_COL].str.find(hicloop)!=-1]
+    dSampleInfoPerLoop = pd.concat([notHIC, isHIC_target], axis = 0)
+    return dSampleInfoPerLoop, N, cell
+    
+
+def RUN(SampleInfo, SamplePair, PRO_ATAC, hicloop, RNA_DEseq, ResourcesDir, OutputDir, LABEL_RNA, LABEL_ATAC, PRO_Region, PRO_minOL, CTITLE):
+    #PRO_ATAC = StrinToList(PRO_ATAC)
     warnings.filterwarnings("ignore")
+    hicloop = StrinToList(hicloop)
     ResourcesDir = PathReformat(ResourcesDir)
     OutputDir = PathReformat(OutputDir)
     dsamplepair = pd.read_csv(SamplePair, sep='\t')
@@ -525,14 +548,31 @@ def RUN(SampleInfo, SamplePair, RNA_DEseq, ResourcesDir, OutputDir, LABEL_RNA, L
         REF_SET=[]
         for ref in Reference.split(','):
             REF_SET.append(ref.strip())
-        dSampleInfo = pd.read_csv(SampleInfo, sep='\t')
-        RNA, HiC = importData(RNA_DEseq, dSampleInfo, Target, REF_SET, ResourcesDir, OutputDir, LABEL_RNA, LABEL_ATAC)
-        HIC_ATAC_OUT, HIC_noATAC_OUT = LinkToHiC(ATAC, HiC, Target, OutputDir)
-        HIC_ATAC_RNA = checkRNA(HIC_ATAC_OUT, RNA, LABEL_RNA)
-        FINAL = CalculateBacon(HIC_ATAC_RNA,  Target, REF_SET, Reference, LABEL_RNA, LABEL_ATAC,CTITLE,weight=1)
-        FINAL.to_csv('ToBacon_'+File_endstring + '.tsv', sep='\t', index=False)
-        saveIntermediateFile(HIC_ATAC_RNA, 'atacWithHiCasP')
-        saveIntermediateFile(HIC_noATAC_OUT, 'atacWithHiCnotP')
+        #dSampleInfo = pd.read_csv(SampleInfo, sep='\t')
+        dSampleInfo, N, cell_hic = HiCLoopBedFile(SampleInfo, hicloop[0])
+        if cell_hic==Target:
+            PRO_ATAC= PRO_ATAC.split(' ')
+            ATAC={}
+            for pro in PRO_ATAC:
+                name = pro.split('.tsv')[0]
+                name = name.split('PRO_ATAC_')[1]
+                cell_atac = name.split('_')[0]
+                if cell_atac==Target:
+                    ATAC[name] = pd.read_csv(pro, sep='\t')
+            #ATAC = MapATACWithPRO.RUN(SampleInfo, SamplePair, ResourcesDir, OutputDir, PRO_Region, PRO_minOL, LABEL_RNA, LABEL_ATAC, True)
+            TMP={}
+            for cell_pair in list(ATAC.keys()):
+                TMP[cell_pair.replace('/','_')] = ATAC[cell_pair]
+            ATAC = TMP.copy()
+            
+            RNA, HiC = importData(RNA_DEseq, dSampleInfo, Target, REF_SET, ResourcesDir, OutputDir, LABEL_RNA, LABEL_ATAC)
+            HIC_ATAC_OUT, HIC_noATAC_OUT = LinkToHiC(ATAC, HiC, Target, OutputDir, N)
+            HIC_ATAC_RNA = checkRNA(HIC_ATAC_OUT, RNA, LABEL_RNA)
+            FINAL = CalculateBacon(HIC_ATAC_RNA,  Target, REF_SET, Reference, LABEL_RNA, LABEL_ATAC,CTITLE,weight=1)
+            FINAL.to_csv('ToBacon_'+File_endstring+N+'.tsv', sep='\t', index=False)
+            #saveIntermediateFile(HIC_ATAC_RNA, 'atacWithHiCasP')
+        #saveIntermediateFile(HIC_noATAC_OUT, 'atacWithHiCnotP')
+
     
 def main():
     parser = argparse.ArgumentParser()
@@ -554,6 +594,10 @@ def main():
                         help="the minimal overlap between ATAC-seq and promoter region")  
     parser.add_argument("--RNA_DEseq", type=str,default=None,
                         help="All RNA-seq outptuts after running DEseq")  
+    parser.add_argument("--PRO_ATAC", type=str,default=None,
+                        help="combined ATAC with promoters")  
+    parser.add_argument("--hicloop", type=str,default=None,
+                        help="HiC bed files")  
     parser.add_argument('--CTITLE', action='store_false',
                         help="Turn off cellline initial title for one pair output")
     parser.set_defaults(CTITLE=False)
@@ -562,7 +606,7 @@ def main():
     args = parser.parse_args()
     print("Starting processing %s" % start)
     print(args)
-    RUN(args.SampleInfo, args.SamplePair, args.RNA_DEseq, args.ResourcesDir, args.OutputDir, 
+    RUN(args.SampleInfo, args.SamplePair, args.PRO_ATAC, args.hicloop, args.RNA_DEseq, args.ResourcesDir, args.OutputDir, 
         args.LABEL_RNA, args.LABEL_ATAC, args.PRO_Region, args.PRO_minOL, args.CTITLE)
     done = datetime.datetime.now()
     elapsed = done - start

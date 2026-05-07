@@ -195,81 +195,96 @@ def importData(SampleInfo, SamplePair, ResourcesDir, OutputDir, LABEL_RNA, LABEL
     
 #### Step
             
-def mappingWithPRO(df, PRO, PRO_Region=50000, PRO_minOL=0.5):
-    df[START_COL] = df[START_COL].astype(float)
-    df[END_COL] = df[END_COL].astype(float)
-    df[OL_COL] = np.nan
-    for chrom in PRO[CHROM_COL].unique():
-        PRO_chrom = PRO[PRO[CHROM_COL]==chrom]
-        df_chrom = df[df[CHROM_COL]==chrom]
-        total = len(PRO_chrom.index)
-        itern = 0
-        for index in PRO_chrom.index:
-            start = PRO_chrom.loc[index, START_COL]
-            end = PRO_chrom.loc[index, END_COL]
-            strand = PRO_chrom.loc[index, STRAND_COL]
-            gID =  PRO_chrom.loc[index, GENEID_COL]
-            if strand=='-':
-                start_preion = end
-                end_pregion = end + PRO_Region
-            elif strand=='+':
-                start_preion = start - PRO_Region
-                end_pregion = start
-            ##
-            start = start_preion
-            end = end_pregion
-            ##
-            sS = df_chrom[(df_chrom[START_COL] - start)>0]
-            Ss = df_chrom[(df_chrom[START_COL] - start)<=0]
-            #
-            seSE = sS[(sS[START_COL]-end)>0]
-            sSe = sS[(sS[START_COL]-end)<=0]
-            sSeE = sSe[(sSe[END_COL] - end)>0]
-            sSEe = sSe[(sSe[END_COL] - end)<=0]
-            #
-            SsE = Ss[start<Ss[END_COL]]
-            SseE = SsE[(SsE[END_COL]-end)>0]
-            SsEe = SsE[(SsE[END_COL]-end)<=0]
-            if sSeE.shape[0]>0:
-                sSeE[OL_COL] =  (end - sSeE[START_COL])/(sSeE[END_COL] - sSeE[START_COL])
-            if sSEe.shape[0]>0:
-                sSEe[OL_COL] =  1
-            if SseE.shape[0]>0:
-                SseE[OL_COL] =  (end - start)/(SseE[END_COL] - SseE[START_COL])
-            if SsEe.shape[0]>0:
-                SsEe[OL_COL] =  (SsEe[END_COL] - start)/(SsEe[END_COL] - SsEe[START_COL])
-            OL = pd.concat([sSeE, sSEe], axis=0)
-            OL = pd.concat([OL, SseE], axis=0)
-            OL = pd.concat([OL, SsEe], axis=0)
-            if  OL.shape[0]>0:
-                OL = OL[OL[OL_COL]>PRO_minOL]
-                ## check whether contain preexist content
-                def_temp = df.loc[OL.index]
-                def_Nan = def_temp[def_temp[OL_COL].isna()]
-                def_NotNan =  def_temp[def_temp[OL_COL].notna()]
-                if def_Nan.shape[0]>0:
-                    df.loc[def_Nan.index, OL_COL] = OL.loc[def_Nan.index, OL_COL]
-                    df.loc[def_Nan.index, STRAND_COL] = strand
-                    df.loc[def_Nan.index, GENEID_COL] = gID
-                if def_NotNan.shape[0]>0:
-                    df.loc[def_NotNan.index, OL_COL] = df.loc[def_NotNan.index, OL_COL].astype(str)+'/'+OL.loc[def_NotNan.index, OL_COL].astype(str)
-                    df.loc[def_NotNan.index, STRAND_COL] = df.loc[def_NotNan.index, STRAND_COL].astype(str)+'/'+strand
-                    df.loc[def_NotNan.index, GENEID_COL] = df.loc[def_NotNan.index, GENEID_COL].astype(str)+'/'+gID
-            if itern%50==0:
-                N = np.round((itern/total)*100, 2)
-                print ('%s percent for %s to map with promoters' % (N, chrom))
-            itern+=1
-        print ('100 percent for %s to map with promoters' % (chrom))
-        print ('')
+def mappingWithPRO(df, PRO, CHROM_N, OutputDir, name, PRO_Region=50000, PRO_minOL=0.5):
+    filepathA = os.path.join(OutputDir, name)
+    filepathB = name
+    filepath = filepathA if os.path.exists(filepathA) else filepathB    
+    if os.path.exists(filepath):
+        df = pd.read_csv(filepath, seo='\t')
+    else:
+        df[START_COL] = df[START_COL].astype(float)
+        df[END_COL] = df[END_COL].astype(float)
+        df[OL_COL] = np.nan
+        #for chrom in PRO[CHROM_COL].unique():
+        for chrom in [CHROM_N]:
+            PRO_chrom = PRO[PRO[CHROM_COL]==chrom]
+            df_chrom = df[df[CHROM_COL]==chrom]
+            total = len(PRO_chrom.index)
+            itern = 0
+            for index in PRO_chrom.index:
+                start = PRO_chrom.loc[index, START_COL]
+                end = PRO_chrom.loc[index, END_COL]
+                strand = PRO_chrom.loc[index, STRAND_COL]
+                gID =  PRO_chrom.loc[index, GENEID_COL]
+                if strand=='-':
+                    start_preion = end
+                    end_pregion = end + PRO_Region
+                elif strand=='+':
+                    start_preion = start - PRO_Region
+                    end_pregion = start
+                ##
+                start = start_preion
+                end = end_pregion
+                ##
+                sS = df_chrom[(df_chrom[START_COL] - start)>0]
+                Ss = df_chrom[(df_chrom[START_COL] - start)<=0]
+                #
+                seSE = sS[(sS[START_COL]-end)>0]
+                sSe = sS[(sS[START_COL]-end)<=0]
+                sSeE = sSe[(sSe[END_COL] - end)>0]
+                sSEe = sSe[(sSe[END_COL] - end)<=0]
+                #
+                SsE = Ss[start<Ss[END_COL]]
+                SseE = SsE[(SsE[END_COL]-end)>0]
+                SsEe = SsE[(SsE[END_COL]-end)<=0]
+                if sSeE.shape[0]>0:
+                    sSeE[OL_COL] =  (end - sSeE[START_COL])/(sSeE[END_COL] - sSeE[START_COL])
+                if sSEe.shape[0]>0:
+                    sSEe[OL_COL] =  1
+                if SseE.shape[0]>0:
+                    SseE[OL_COL] =  (end - start)/(SseE[END_COL] - SseE[START_COL])
+                if SsEe.shape[0]>0:
+                    SsEe[OL_COL] =  (SsEe[END_COL] - start)/(SsEe[END_COL] - SsEe[START_COL])
+                OL = pd.concat([sSeE, sSEe], axis=0)
+                OL = pd.concat([OL, SseE], axis=0)
+                OL = pd.concat([OL, SsEe], axis=0)
+                if  OL.shape[0]>0:
+                    OL = OL[OL[OL_COL]>PRO_minOL]
+                    ## check whether contain preexist content
+                    def_temp = df.loc[OL.index]
+                    def_Nan = def_temp[def_temp[OL_COL].isna()]
+                    def_NotNan =  def_temp[def_temp[OL_COL].notna()]
+                    if def_Nan.shape[0]>0:
+                        df.loc[def_Nan.index, OL_COL] = OL.loc[def_Nan.index, OL_COL]
+                        df.loc[def_Nan.index, STRAND_COL] = strand
+                        df.loc[def_Nan.index, GENEID_COL] = gID
+                    if def_NotNan.shape[0]>0:
+                        df.loc[def_NotNan.index, OL_COL] = df.loc[def_NotNan.index, OL_COL].astype(str)+'/'+OL.loc[def_NotNan.index, OL_COL].astype(str)
+                        df.loc[def_NotNan.index, STRAND_COL] = df.loc[def_NotNan.index, STRAND_COL].astype(str)+'/'+strand
+                        df.loc[def_NotNan.index, GENEID_COL] = df.loc[def_NotNan.index, GENEID_COL].astype(str)+'/'+gID
+                if itern%50==0:
+                    N = np.round((itern/total)*100, 2)
+                    print ('%s percent for %s to map with promoters' % (N, chrom))
+                itern+=1
+            print ('100 percent for %s to map with promoters' % (chrom))
+            print ('')
     df[OL_COL] = df[OL_COL].astype(str)
     return df
 
                 
-def MapATACwithPRO(ATAC, PRO, OutputDir, PRO_Region=5000, PRO_minOL=0.5):
+def MapATACwithPRO(ATAC, PRO, CHROM, OutputDir, PRO_Region=5000, PRO_minOL=0.5):
     atac_all=[]
     ATAC_temp={}
+    CHROM = int(CHROM)
+    if CHROM<23:
+        CHROM_N = 'chr'+str(CHROM)
+    elif CHROM==23:
+        CHROM_N='chrX'
+    elif CHROM==24:
+        CHROM_N='chrY'
     for name in list(ATAC.keys()):
         atac = ATAC[name].copy()
+        atac = atac[atac[CHROM_COL]==CHROM_N]
         atac = atac.set_index(atac[COORDS_COL])
         ATAC_temp[name] = atac.copy()
         atac_all.append(atac)
@@ -278,7 +293,7 @@ def MapATACwithPRO(ATAC, PRO, OutputDir, PRO_Region=5000, PRO_minOL=0.5):
     df_Coord = df.drop_duplicates()
     #df_Coord.to_csv(OutputDir+'PRO_ATAC_Coord.tsv', sep='\t', index=False)
     if isinstance(PRO, pd.DataFrame):
-        df = mappingWithPRO(df_Coord, PRO, PRO_Region, PRO_minOL)
+        df = mappingWithPRO(df_Coord, PRO, CHROM_N, OutputDir, name, PRO_Region, PRO_minOL)
         for name in list(ATAC_temp.keys()):
             atac = ATAC_temp[name].copy()
             for col in [OL_COL, STRAND_COL,GENEID_COL]:
@@ -289,26 +304,26 @@ def MapATACwithPRO(ATAC, PRO, OutputDir, PRO_Region=5000, PRO_minOL=0.5):
             atac = ATAC_temp[name].copy()
             cellline = name.split('/')[0]
             promoter = PRO[cellline]
-            atac = mappingWithPRO(atac, promoter, PRO_Region, PRO_minOL)
+            atac = mappingWithPRO(atac, promoter, CHROM_N, OutputDir, name, PRO_Region, PRO_minOL)
             ATAC_temp[name] = atac.copy()
     ATAC = ATAC_temp.copy()
     for name in  list(ATAC.keys()):
-        ATAC[name].to_csv(OutputDir+'PRO_ATAC_'+name.replace('/','_')+'.tsv', sep='\t', index=False)
+        ATAC[name].to_csv('PRO_ATAC_'+name.replace('/','_')+'_chr'+str(CHROM)+'.tsv', sep='\t', index=False)
     return  ATAC, df_Coord
         
         
-def RUN(SampleInfo, SamplePair, ResourcesDir, OutputDir, PRO_Region, PRO_minOL, LABEL_RNA, LABEL_ATAC, RUN_WITH_WARNINGS=False):
+def RUN(SampleInfo, SamplePair, ResourcesDir, OutputDir, CHROM, PRO_Region, PRO_minOL, LABEL_RNA, LABEL_ATAC, RUN_WITH_WARNINGS=False):
     warnings.filterwarnings("ignore")
     ResourcesDir = PathReformat(ResourcesDir)
     OutputDir = PathReformat(OutputDir)
     ATAC, PRO =  importData(SampleInfo, SamplePair, ResourcesDir, OutputDir, LABEL_RNA, LABEL_ATAC, RUN_WITH_WARNINGS)
     ### Annotate ATAC-seq data with promoter regions.
-    ATAC, df_Coord = MapATACwithPRO(ATAC, PRO, OutputDir,  PRO_Region, PRO_minOL)
+    ATAC, df_Coord = MapATACwithPRO(ATAC, PRO, CHROM, OutputDir,  PRO_Region, PRO_minOL)
     return ATAC 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--ResourcesDir", type=str,default='./resource/',
+    parser.add_argument("-i", "--ResourcesDir", type=str,default='./resources/',
                         help="main directory")
     parser.add_argument("-si", "--SampleInfo", type=str,default='SampleInfo.tsv',
                         help="import RNA-seq (DESeq formate), ATAC-seq, HiC and GeneList")
@@ -320,6 +335,8 @@ def main():
                         help="upstream or dowmstream of a gene as promoter region")
     parser.add_argument("-m", "--PRO_minOL", type=float,default=0.5,
                         help="the minimal overlap between ATAC-seq and promoter region")  
+    parser.add_argument("-c", "--CHROM", type=int,default=1,
+                        help="chromsome") 
     parser.add_argument("--LABEL_RNA", type=str,default='RNAseq',
                         help="labels for RNAseq from DEseq")    
     parser.add_argument("--LABEL_ATAC", type=str,default='ATACseq',
@@ -332,7 +349,7 @@ def main():
     args = parser.parse_args()
     print("Starting processing %s" % start)
     print(args)
-    RUN(args.SampleInfo, args.SamplePair, args.ResourcesDir, args.OutputDir, args.PRO_Region, args.PRO_minOL, args.LABEL_RNA, args.LABEL_ATAC, args.RUN_WITH_WARNINGS)
+    RUN(args.SampleInfo, args.SamplePair, args.ResourcesDir, args.OutputDir, args.CHROM, args.PRO_Region, args.PRO_minOL, args.LABEL_RNA, args.LABEL_ATAC, args.RUN_WITH_WARNINGS)
     done = datetime.datetime.now()
     elapsed = done - start
     duration = ':'.join(str(elapsed).split(':')[1:])

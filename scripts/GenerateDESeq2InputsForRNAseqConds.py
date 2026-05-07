@@ -6,7 +6,7 @@ Created on Wed Apr 16 17:26:48 2025
 @author: shawt5
 """
 
-import glob
+import glob, os
 import pandas as pd
 import numpy as np
 import argparse, datetime
@@ -21,18 +21,13 @@ CHROM_COL='CHROM'
 START_COL='Start'
 END_COL='End'
 
-def importRNAseq(inputFolder):
-    files = glob.glob(inputFolder)
-    if files:
-        dfs = []
-        for f in files:
-            df = pd.read_csv(f, sep='\t')  # RSEM files are usually tab-separated
-            dfs.append(df)
-        dfs = pd.concat(dfs, axis=0, ignore_index=True)
+def importRNAseq(file):
+    if os.path.exists(file):
+        df = pd.read_csv(file, sep='\t')
     else:
         print("No matching files found.")
-        dfs=[]
-    return dfs, files
+        df=[]
+    return df
 
 
 def StrinToList(label):
@@ -42,23 +37,22 @@ def StrinToList(label):
         CELL.append(cell.strip())
     return CELL
 
-def RUN(mainDir, label, maxNumRep, filePattern):
+def RUN(mainDir, label, FileName):
     itern = 0
     RNA_conds = pd.DataFrame(columns=['Sample', 'CellType', 'Path'])
     CELL=StrinToList(label)
-    MaxNum = StrinToList(maxNumRep)
-    i=0
-    for cellline in CELL:
-        for repNum in range(1, int(MaxNum[i])+1):
-            inputFolder=mainDir+cellline.lower()+'/rna_seq/rep'+str(repNum)+filePattern
-            dfs, files = importRNAseq(inputFolder)
-            if len(dfs)>0:
+    FileName=StrinToList(FileName)
+    for i, cellline in enumerate(CELL):
+        files = glob.glob(FileName[i])
+        MaxNum = len(files)
+        for repNum in range(1, int(MaxNum)+1):
+            file =files[repNum-1]
+            df = importRNAseq(file)
+            if len(df)>0:
                 RNA_conds.loc[itern, 'Sample'] = cellline+'_R'+str(repNum)
                 RNA_conds.loc[itern, 'CellType'] = cellline
-                RNA_conds.loc[itern, 'Path'] = files[0]
+                RNA_conds.loc[itern, 'Path'] = file
                 itern+=1
-        print ('')
-        i+=1
     RNA_conds.to_csv('RNA_conds.txt', sep='\t', index=False)
 
 
@@ -68,15 +62,13 @@ def main():
                         help="inputFolder")
     parser.add_argument("-l", "--label", type=str, default='["HEK293", "IMR32"]',
                     help="List of labels for cell lines")
-    parser.add_argument("-r", "--maxNumRep", type=str,default='[3,3,3,3]',
+    parser.add_argument("-f", "--FileName", type=str,default='[./resources/hek293/rna_seq/*.genes.results, ./resources/imr32/rna_seq/*.genes.results]',
                         help="maxmal rep #")
-    parser.add_argument("-p", "--filePattern", type=str,default='/rsem_quant/*genes.results',
-                        help="Labels for cell lines with rep#")
     start = datetime.datetime.now()
     args = parser.parse_args()
     print("Starting processing %s" % start)
     print(args)
-    RUN(args.mainDir, args.label, args.maxNumRep, args.filePattern)
+    RUN(args.mainDir, args.label, args.FileName)
     done = datetime.datetime.now()
     elapsed = done - start
     duration = ':'.join(str(elapsed).split(':')[1:])
