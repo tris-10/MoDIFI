@@ -59,8 +59,6 @@ Update the input paths and parameters in <b> dact.config </b>.
     <pre> ATACBAMFiles= absolute path </pre>   
   - Label for DESeq2 outputs:
     <pre> ATACSeq='ATACseq' </pre>
-    - Label for DESeq2 outputs:
-    <pre> ATACSeq='ATACseq' </pre> 
   - Filter out low quality variants:
     <pre> atac_minQ=5 </pre> 
   - The column used for merging:
@@ -118,3 +116,5 @@ Example:
 Then run:
 
 <pre> nextflow run modifi.nf -c modifi_example.config -entry recalMoDIFI </pre>
+
+
