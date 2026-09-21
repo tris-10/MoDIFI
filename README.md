@@ -14,7 +14,7 @@ It supports modular workflows, containerized execution (Docker/Singularity), and
 
 ### Requirements
 
-- Nextflow ≥ 22.10
+- Nextflow ≥ 22.10 ≤ 25.10.2 (Successfully tested below version 26.)
 - Java ≥ 11
 - Docker or Singularity/Apptainer (recommended for HPC)
 
@@ -22,7 +22,7 @@ It supports modular workflows, containerized execution (Docker/Singularity), and
 ### Installation
 Clone the repository:
 <pre>
-git clone https://github.com/your-org/MoDIFI.git
+git clone https://github.com/tris-10/MoDIFI.git
 cd MoDIFI
 </pre>
 
@@ -51,7 +51,7 @@ MoDIFI/
 </pre>
 
 ### Inputs includes
-Update the input paths and parameters in <b> dact.config </b>.
+Update the input paths and parameters in <b> modifi_example.config. </b>
 #### ATAC-seq:
   - Peak files:
     <pre> ATACBEDFile= absolute path </pre>
@@ -59,21 +59,26 @@ Update the input paths and parameters in <b> dact.config </b>.
     <pre> ATACBAMFiles= absolute path </pre>   
   - Label for DESeq2 outputs:
     <pre> ATACSeq='ATACseq' </pre>
-  - Filter out low quality variants:
-    <pre> atac_minQ=5 </pre> 
+  - Filter out low quality peaks:
+    <pre> atac_peak_minQ=5 </pre> 
+  - Filter out low quality mapping:
+    <pre> atac_mapq_minQ=5 </pre>
   - The column used for merging:
-    <pre> ATAC_Key_col='Region' </pre>      
+    <pre> ATAC_Key_col='Region' </pre>
+  -  For merged ATAC-seq regions
+    <pre> atac_merge_rule= "min" {min, max, mean, median} </pre>
+
 #### RNA-seq:
   - Gene expression files:
     <pre> RNACountFile= absolute path  </pre>
   - Label for DESeq2 outputs:
-    <pre> RRNASeq='RNAseq'   </pre>
-  - The column of gene IDs for DEseq anlysis:
+    <pre> RNASeq='RNAseq'   </pre>
+  - The column of gene IDs for DESeq2 analysis:
     <pre> RNA_Key_col='GeneID'   </pre>
-  - The column of RNA counts for DEseq anlysis:
-    <pre> RNA_quantification='expected_count'   </pre>  
+  - The column of RNA counts for DESeq2 analysis:
+    <pre> RNA_quantification='expected_count' </pre>  
 #### Hi-C:
-  - HiC files:
+  - Hi-C files:
     <pre> HiCLoopsFile= absolute path  </pre>
 
 #### Others:
@@ -82,7 +87,7 @@ Update the input paths and parameters in <b> dact.config </b>.
   - Prior information:
     <pre> prior_file="${resources_dir}/Gnocchi.tsv" </pre>
   - Prior information:
-  <pre> SamplePair = "${resources_dir}/SamplePair.tsv" </pre>
+    <pre> SamplePair = "${resources_dir}/SamplePair.tsv" </pre>
 
 ### Workflow Overview
 1. ATAC-seq peaks linked with promoters
@@ -99,11 +104,10 @@ Run the full workflow:
 
 ### Outputs include:
 
-- ATAC_counts.txt, ATAC_ann.txt, ATAC_conds.txt
-- RNA_counts.txt, RNA_ann.txt, RNA_conds.txt
-- Comparison results: [Target]_vs_[Reference]_ATACseq.txt, [Target]_vs_[Reference]_RNAseq.txt, etc.
-- MoDIFI results: MoDIFI_all_[Target]_vs_[Reference].tsv, MoDIFI_loop_[Target]_vs_[Reference].tsv 
-
+- MoDIFI results: MoDIFI_all_[Target]_vs_[Reference].tsv, MoDIFI_loop_[Target]_vs_[Reference].tsv
+### In temp folder (defined as temp_dir in config):
+- ATAC_counts.txt, ATAC_ann.txt
+- Comparison results: `[Target]_vs_[Reference]_ATACseq.txt`, `[Target]_vs_[Reference]_RNAseq.txt`, etc.
 ### Re-running with recalMoDIFI
 
 After the full run, edit resources/SamplePair.tsv to define new Target–Reference comparisons.

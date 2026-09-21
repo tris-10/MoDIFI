@@ -11,7 +11,7 @@ import pandas as pd
 import os, sys
 import argparse, datetime
 import warnings
-import MapATACWithPRO
+#import MapATACWithPRO
 import glob
 from scipy import stats
 import subprocess
