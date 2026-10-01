@@ -60,7 +60,8 @@ Update the input paths and parameters in <b> dact.config </b>.
   - Label for DESeq2 outputs:
     <pre> ATACSeq='ATACseq' </pre>
   - Filter out low quality variants:
-    <pre> atac_minQ=5 </pre> 
+    <pre> atac_peak_minQ=5 </pre> 
+    <pre> atac_mapq_minQ=5 </pre> 
   - The column used for merging:
     <pre> ATAC_Key_col='Region' </pre>      
 #### RNA-seq:
