@@ -49,7 +49,7 @@ process ConcatenateAndSortPeaks {
         print \$1, \$2, \$3, out, \$5;
     }' OFS="\\t" > tmp_merge.bed
     # Filter by column 5 and then remove the quality column
-    awk '\$5 > ${params.atac_minQ}' tmp_merge.bed | cut -f1-4 > merge.bed
+    awk '\$5 > ${params.atac_peak_minQ}' tmp_merge.bed | cut -f1-4 > merge.bed
     """
 }
 
